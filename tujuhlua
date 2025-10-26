@@ -1,0 +1,371 @@
+-- Auto Farm Training Script for Delta Executor
+-- Combat Power Booster with Enhanced Multipliers
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Variables
+local autoFarmEnabled = false
+local multiplierValue = 100000000 -- Default 100 juta multiplier
+local selectedTrainType = 1 -- 1=Arms, 2=Legs, 3=Back, 4=Agility
+
+-- GUI Creation
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local TitleBar = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local CloseButton = Instance.new("TextButton")
+local MinimizeButton = Instance.new("TextButton")
+local ContentFrame = Instance.new("Frame")
+
+-- Status Labels
+local StatusLabel = Instance.new("TextLabel")
+local CPLabel = Instance.new("TextLabel")
+
+-- Controls
+local StartButton = Instance.new("TextButton")
+local MultiplierBox = Instance.new("TextBox")
+local MultiplierLabel = Instance.new("TextLabel")
+
+-- Train Type Selection
+local TypeLabel = Instance.new("TextLabel")
+local ArmsButton = Instance.new("TextButton")
+local LegsButton = Instance.new("TextButton")
+local BackButton = Instance.new("TextButton")
+local AgilityButton = Instance.new("TextButton")
+
+-- GUI Properties
+ScreenGui.Name = "AutoFarmGUI"
+ScreenGui.Parent = game.CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+MainFrame.BorderSizePixel = 0
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -200)
+MainFrame.Size = UDim2.new(0, 400, 0, 400)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+-- Title Bar
+TitleBar.Name = "TitleBar"
+TitleBar.Parent = MainFrame
+TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TitleBar.BorderSizePixel = 0
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
+
+Title.Name = "Title"
+Title.Parent = TitleBar
+Title.BackgroundTransparency = 1
+Title.Size = UDim2.new(0.7, 0, 1, 0)
+Title.Font = Enum.Font.GothamBold
+Title.Text = "Auto Farm Training"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Position = UDim2.new(0, 10, 0, 0)
+
+-- Close Button
+CloseButton.Name = "CloseButton"
+CloseButton.Parent = TitleBar
+CloseButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+CloseButton.BorderSizePixel = 0
+CloseButton.Position = UDim2.new(1, -30, 0, 5)
+CloseButton.Size = UDim2.new(0, 25, 0, 25)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextSize = 14
+
+-- Minimize Button
+MinimizeButton.Name = "MinimizeButton"
+MinimizeButton.Parent = TitleBar
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 193, 7)
+MinimizeButton.BorderSizePixel = 0
+MinimizeButton.Position = UDim2.new(1, -60, 0, 5)
+MinimizeButton.Size = UDim2.new(0, 25, 0, 25)
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.Text = "-"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.TextSize = 14
+
+-- Content Frame
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Parent = MainFrame
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Position = UDim2.new(0, 10, 0, 45)
+ContentFrame.Size = UDim2.new(1, -20, 1, -55)
+
+-- Status Label
+StatusLabel.Name = "StatusLabel"
+StatusLabel.Parent = ContentFrame
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Size = UDim2.new(1, 0, 0, 25)
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.Text = "Status: Inactive"
+StatusLabel.TextColor3 = Color3.fromRGB(255, 85, 85)
+StatusLabel.TextSize = 14
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Combat Power Label
+CPLabel.Name = "CPLabel"
+CPLabel.Parent = ContentFrame
+CPLabel.BackgroundTransparency = 1
+CPLabel.Position = UDim2.new(0, 0, 0, 30)
+CPLabel.Size = UDim2.new(1, 0, 0, 25)
+CPLabel.Font = Enum.Font.Gotham
+CPLabel.Text = "Combat Power: 0"
+CPLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+CPLabel.TextSize = 14
+CPLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Multiplier Label
+MultiplierLabel.Name = "MultiplierLabel"
+MultiplierLabel.Parent = ContentFrame
+MultiplierLabel.BackgroundTransparency = 1
+MultiplierLabel.Position = UDim2.new(0, 0, 0, 70)
+MultiplierLabel.Size = UDim2.new(1, 0, 0, 25)
+MultiplierLabel.Font = Enum.Font.GothamBold
+MultiplierLabel.Text = "Multiplier (nilai training):"
+MultiplierLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+MultiplierLabel.TextSize = 13
+MultiplierLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Multiplier Box
+MultiplierBox.Name = "MultiplierBox"
+MultiplierBox.Parent = ContentFrame
+MultiplierBox.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+MultiplierBox.BorderSizePixel = 0
+MultiplierBox.Position = UDim2.new(0, 0, 0, 100)
+MultiplierBox.Size = UDim2.new(1, 0, 0, 35)
+MultiplierBox.Font = Enum.Font.Gotham
+MultiplierBox.PlaceholderText = "Contoh: 100000000 (100 juta)"
+MultiplierBox.Text = "100000000"
+MultiplierBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+MultiplierBox.TextSize = 14
+
+-- Train Type Label
+TypeLabel.Name = "TypeLabel"
+TypeLabel.Parent = ContentFrame
+TypeLabel.BackgroundTransparency = 1
+TypeLabel.Position = UDim2.new(0, 0, 0, 145)
+TypeLabel.Size = UDim2.new(1, 0, 0, 25)
+TypeLabel.Font = Enum.Font.GothamBold
+TypeLabel.Text = "Pilih Tipe Training:"
+TypeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TypeLabel.TextSize = 13
+TypeLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Arms Button
+ArmsButton.Name = "ArmsButton"
+ArmsButton.Parent = ContentFrame
+ArmsButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+ArmsButton.BorderSizePixel = 0
+ArmsButton.Position = UDim2.new(0, 0, 0, 175)
+ArmsButton.Size = UDim2.new(0.48, 0, 0, 35)
+ArmsButton.Font = Enum.Font.GothamBold
+ArmsButton.Text = "Arms (1)"
+ArmsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ArmsButton.TextSize = 13
+
+-- Legs Button
+LegsButton.Name = "LegsButton"
+LegsButton.Parent = ContentFrame
+LegsButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
+LegsButton.BorderSizePixel = 0
+LegsButton.Position = UDim2.new(0.52, 0, 0, 175)
+LegsButton.Size = UDim2.new(0.48, 0, 0, 35)
+LegsButton.Font = Enum.Font.GothamBold
+LegsButton.Text = "Legs (2)"
+LegsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+LegsButton.TextSize = 13
+
+-- Back Button
+BackButton.Name = "BackButton"
+BackButton.Parent = ContentFrame
+BackButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
+BackButton.BorderSizePixel = 0
+BackButton.Position = UDim2.new(0, 0, 0, 220)
+BackButton.Size = UDim2.new(0.48, 0, 0, 35)
+BackButton.Font = Enum.Font.GothamBold
+BackButton.Text = "Back (3)"
+BackButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+BackButton.TextSize = 13
+
+-- Agility Button
+AgilityButton.Name = "AgilityButton"
+AgilityButton.Parent = ContentFrame
+AgilityButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
+AgilityButton.BorderSizePixel = 0
+AgilityButton.Position = UDim2.new(0.52, 0, 0, 220)
+AgilityButton.Size = UDim2.new(0.48, 0, 0, 35)
+AgilityButton.Font = Enum.Font.GothamBold
+AgilityButton.Text = "Agility (4)"
+AgilityButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AgilityButton.TextSize = 13
+
+-- Start Button
+StartButton.Name = "StartButton"
+StartButton.Parent = ContentFrame
+StartButton.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
+StartButton.BorderSizePixel = 0
+StartButton.Position = UDim2.new(0, 0, 0, 270)
+StartButton.Size = UDim2.new(1, 0, 0, 45)
+StartButton.Font = Enum.Font.GothamBold
+StartButton.Text = "START AUTO FARM"
+StartButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+StartButton.TextSize = 15
+
+-- Functions
+local function formatNumber(num)
+    if num >= 1e12 then
+        return string.format("%.2fT", num / 1e12)
+    elseif num >= 1e9 then
+        return string.format("%.2fB", num / 1e9)
+    elseif num >= 1e6 then
+        return string.format("%.2fM", num / 1e6)
+    else
+        return tostring(math.floor(num))
+    end
+end
+
+local function selectTrainType(typeNum)
+    selectedTrainType = typeNum
+    ArmsButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
+    LegsButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
+    BackButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
+    AgilityButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
+    
+    if typeNum == 1 then
+        ArmsButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+    elseif typeNum == 2 then
+        LegsButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+    elseif typeNum == 3 then
+        BackButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+    elseif typeNum == 4 then
+        AgilityButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+    end
+end
+
+local function performTraining()
+    if not autoFarmEnabled then return end
+    
+    local success, err = pcall(function()
+        -- Fire training events dengan multiplier
+        local ApplyStationaryTrain = ReplicatedStorage.TrainEquipment.Remote.ApplyStationaryTrain
+        local TrainSpeedHasChanged = ReplicatedStorage.TrainSystem.Remote.TrainSpeedHasChanged
+        
+        if ApplyStationaryTrain and TrainSpeedHasChanged then
+            ApplyStationaryTrain:InvokeServer()
+            TrainSpeedHasChanged:FireServer(selectedTrainType)
+            
+            -- Trigger training value dengan multiplier
+            task.wait(0.1)
+            
+            -- Simulasi peningkatan combat power
+            if ReplicatedStorage:FindFirstChild("TrainSystem") then
+                local trainSystem = ReplicatedStorage.TrainSystem
+                if trainSystem:FindFirstChild("Bindable") then
+                    local bindable = trainSystem.Bindable
+                    if bindable:FindFirstChild("PlayerTrainValueHasChanged") then
+                        bindable.PlayerTrainValueHasChanged:Fire(
+                            LocalPlayer,
+                            selectedTrainType,
+                            multiplierValue,
+                            multiplierValue
+                        )
+                    end
+                end
+            end
+        end
+    end)
+    
+    if not success then
+        warn("Training error:", err)
+    end
+end
+
+-- Button Events
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+    autoFarmEnabled = false
+end)
+
+MinimizeButton.MouseButton1Click:Connect(function()
+    ContentFrame.Visible = not ContentFrame.Visible
+    if ContentFrame.Visible then
+        MainFrame.Size = UDim2.new(0, 400, 0, 400)
+    else
+        MainFrame.Size = UDim2.new(0, 400, 0, 35)
+    end
+end)
+
+ArmsButton.MouseButton1Click:Connect(function()
+    selectTrainType(1)
+end)
+
+LegsButton.MouseButton1Click:Connect(function()
+    selectTrainType(2)
+end)
+
+BackButton.MouseButton1Click:Connect(function()
+    selectTrainType(3)
+end)
+
+AgilityButton.MouseButton1Click:Connect(function()
+    selectTrainType(4)
+end)
+
+StartButton.MouseButton1Click:Connect(function()
+    autoFarmEnabled = not autoFarmEnabled
+    
+    if autoFarmEnabled then
+        local inputText = MultiplierBox.Text
+        local num = tonumber(inputText)
+        if num and num > 0 then
+            multiplierValue = num
+        else
+            multiplierValue = 100000000
+        end
+        
+        StartButton.Text = "STOP AUTO FARM"
+        StartButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+        StatusLabel.Text = "Status: Active"
+        StatusLabel.TextColor3 = Color3.fromRGB(85, 255, 85)
+    else
+        StartButton.Text = "START AUTO FARM"
+        StartButton.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
+        StatusLabel.Text = "Status: Inactive"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 85, 85)
+    end
+end)
+
+-- Main Loop
+RunService.Heartbeat:Connect(function()
+    if autoFarmEnabled then
+        performTraining()
+        
+        -- Update Combat Power Display
+        local success, cp = pcall(function()
+            if ReplicatedStorage:FindFirstChild("TrainSystem") then
+                local bindable = ReplicatedStorage.TrainSystem.Bindable
+                if bindable and bindable:FindFirstChild("GetCombatPower") then
+                    return bindable.GetCombatPower:Invoke(LocalPlayer)
+                end
+            end
+            return 0
+        end)
+        
+        if success and cp then
+            CPLabel.Text = "Combat Power: " .. formatNumber(cp)
+        end
+    end
+end)
+
+print("Auto Farm Training GUI Loaded!")
+print("Multiplier default: 100 juta per training")
+print("Ubah nilai untuk meningkatkan hingga triliun!")
