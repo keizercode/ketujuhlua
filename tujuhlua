@@ -10,7 +10,9 @@ local LocalPlayer = Players.LocalPlayer
 -- Variables
 local autoFarmEnabled = false
 local multiplierValue = 100000000 -- Default 100 juta multiplier
-local selectedTrainType = 1 -- 1=Arms, 2=Legs, 3=Back, 4=Agility
+local selectedTrainType = 1 -- 1=Arms, 2=Back, 3=Legs, 4=Agility (FIXED)
+local trainingSpeed = 0.5 -- Delay antar training (detik)
+local lastTrainTime = 0
 
 -- GUI Creation
 local ScreenGui = Instance.new("ScreenGui")
@@ -33,8 +35,8 @@ local MultiplierLabel = Instance.new("TextLabel")
 -- Train Type Selection
 local TypeLabel = Instance.new("TextLabel")
 local ArmsButton = Instance.new("TextButton")
-local LegsButton = Instance.new("TextButton")
 local BackButton = Instance.new("TextButton")
+local LegsButton = Instance.new("TextButton")
 local AgilityButton = Instance.new("TextButton")
 
 -- GUI Properties
@@ -63,7 +65,7 @@ Title.Parent = TitleBar
 Title.BackgroundTransparency = 1
 Title.Size = UDim2.new(0.7, 0, 1, 0)
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Auto Farm Training"
+Title.Text = "Auto Farm Training v2"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 16
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -143,7 +145,7 @@ MultiplierBox.BorderSizePixel = 0
 MultiplierBox.Position = UDim2.new(0, 0, 0, 100)
 MultiplierBox.Size = UDim2.new(1, 0, 0, 35)
 MultiplierBox.Font = Enum.Font.Gotham
-MultiplierBox.PlaceholderText = "Contoh: 100000000 (100 juta)"
+MultiplierBox.PlaceholderText = "Contoh: 1000000000000 (1 triliun)"
 MultiplierBox.Text = "100000000"
 MultiplierBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 MultiplierBox.TextSize = 14
@@ -172,29 +174,29 @@ ArmsButton.Text = "Arms (1)"
 ArmsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 ArmsButton.TextSize = 13
 
--- Legs Button
-LegsButton.Name = "LegsButton"
-LegsButton.Parent = ContentFrame
-LegsButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
-LegsButton.BorderSizePixel = 0
-LegsButton.Position = UDim2.new(0.52, 0, 0, 175)
-LegsButton.Size = UDim2.new(0.48, 0, 0, 35)
-LegsButton.Font = Enum.Font.GothamBold
-LegsButton.Text = "Legs (2)"
-LegsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-LegsButton.TextSize = 13
-
--- Back Button
+-- Back Button (FIXED POSITION)
 BackButton.Name = "BackButton"
 BackButton.Parent = ContentFrame
 BackButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
 BackButton.BorderSizePixel = 0
-BackButton.Position = UDim2.new(0, 0, 0, 220)
+BackButton.Position = UDim2.new(0.52, 0, 0, 175)
 BackButton.Size = UDim2.new(0.48, 0, 0, 35)
 BackButton.Font = Enum.Font.GothamBold
-BackButton.Text = "Back (3)"
+BackButton.Text = "Back (2)"
 BackButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 BackButton.TextSize = 13
+
+-- Legs Button (FIXED POSITION)
+LegsButton.Name = "LegsButton"
+LegsButton.Parent = ContentFrame
+LegsButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
+LegsButton.BorderSizePixel = 0
+LegsButton.Position = UDim2.new(0, 0, 0, 220)
+LegsButton.Size = UDim2.new(0.48, 0, 0, 35)
+LegsButton.Font = Enum.Font.GothamBold
+LegsButton.Text = "Legs (3)"
+LegsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+LegsButton.TextSize = 13
 
 -- Agility Button
 AgilityButton.Name = "AgilityButton"
@@ -236,16 +238,16 @@ end
 local function selectTrainType(typeNum)
     selectedTrainType = typeNum
     ArmsButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
-    LegsButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
     BackButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
+    LegsButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
     AgilityButton.BackgroundColor3 = Color3.fromRGB(65, 65, 75)
     
     if typeNum == 1 then
         ArmsButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
     elseif typeNum == 2 then
-        LegsButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
-    elseif typeNum == 3 then
         BackButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+    elseif typeNum == 3 then
+        LegsButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
     elseif typeNum == 4 then
         AgilityButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
     end
@@ -254,32 +256,70 @@ end
 local function performTraining()
     if not autoFarmEnabled then return end
     
+    local currentTime = tick()
+    if currentTime - lastTrainTime < trainingSpeed then
+        return
+    end
+    lastTrainTime = currentTime
+    
     local success, err = pcall(function()
-        -- Fire training events dengan multiplier
-        local ApplyStationaryTrain = ReplicatedStorage.TrainEquipment.Remote.ApplyStationaryTrain
-        local TrainSpeedHasChanged = ReplicatedStorage.TrainSystem.Remote.TrainSpeedHasChanged
+        -- Method 1: Gunakan remote function yang benar
+        local TrainSystemRemote = ReplicatedStorage:FindFirstChild("TrainSystem")
+        if TrainSystemRemote and TrainSystemRemote:FindFirstChild("Remote") then
+            local TrainSpeedHasChanged = TrainSystemRemote.Remote:FindFirstChild("TrainSpeedHasChanged")
+            if TrainSpeedHasChanged then
+                TrainSpeedHasChanged:FireServer(selectedTrainType)
+            end
+        end
         
-        if ApplyStationaryTrain and TrainSpeedHasChanged then
-            ApplyStationaryTrain:InvokeServer()
-            TrainSpeedHasChanged:FireServer(selectedTrainType)
+        -- Method 2: Trigger stationary train
+        local TrainEquipmentRemote = ReplicatedStorage:FindFirstChild("TrainEquipment")
+        if TrainEquipmentRemote and TrainEquipmentRemote:FindFirstChild("Remote") then
+            local ApplyStationaryTrain = TrainEquipmentRemote.Remote:FindFirstChild("ApplyStationaryTrain")
+            if ApplyStationaryTrain then
+                ApplyStationaryTrain:InvokeServer()
+            end
+        end
+        
+        -- Method 3: Fire bindable event dengan multiplier value
+        local TrainSystemBindable = ReplicatedStorage:FindFirstChild("TrainSystem")
+        if TrainSystemBindable and TrainSystemBindable:FindFirstChild("Bindable") then
+            local bindable = TrainSystemBindable.Bindable
             
-            -- Trigger training value dengan multiplier
-            task.wait(0.1)
+            -- Get current value
+            local GetTrainValue = bindable:FindFirstChild("GetTrainValue")
+            local currentValue = 0
+            if GetTrainValue then
+                currentValue = GetTrainValue:Invoke(LocalPlayer, selectedTrainType) or 0
+            end
             
-            -- Simulasi peningkatan combat power
-            if ReplicatedStorage:FindFirstChild("TrainSystem") then
-                local trainSystem = ReplicatedStorage.TrainSystem
-                if trainSystem:FindFirstChild("Bindable") then
-                    local bindable = trainSystem.Bindable
-                    if bindable:FindFirstChild("PlayerTrainValueHasChanged") then
-                        bindable.PlayerTrainValueHasChanged:Fire(
-                            LocalPlayer,
-                            selectedTrainType,
-                            multiplierValue,
-                            multiplierValue
-                        )
-                    end
-                end
+            -- Fire dengan nilai baru
+            local PlayerTrainValueHasChanged = bindable:FindFirstChild("PlayerTrainValueHasChanged")
+            if PlayerTrainValueHasChanged then
+                local newValue = currentValue + multiplierValue
+                PlayerTrainValueHasChanged:Fire(
+                    LocalPlayer,
+                    selectedTrainType,
+                    newValue,
+                    currentValue
+                )
+            end
+            
+            -- Update combat power
+            local PlayerCombatPowerHasChanged = bindable:FindFirstChild("PlayerCombatPowerHasChanged")
+            local GetCombatPower = bindable:FindFirstChild("GetCombatPower")
+            if PlayerCombatPowerHasChanged and GetCombatPower then
+                local newCP = GetCombatPower:Invoke(LocalPlayer) or 0
+                PlayerCombatPowerHasChanged:Fire(LocalPlayer, newCP + multiplierValue)
+            end
+        end
+        
+        -- Method 4: Fire statistics
+        local StatisticsBindable = ReplicatedStorage:FindFirstChild("Statistics")
+        if StatisticsBindable and StatisticsBindable:FindFirstChild("Bindable") then
+            local StatisticsDataHasChanged = StatisticsBindable.Bindable:FindFirstChild("StatisticsDataHasChanged")
+            if StatisticsDataHasChanged then
+                StatisticsDataHasChanged:Fire(math.random(100000, 999999), 1)
             end
         end
     end)
@@ -308,11 +348,11 @@ ArmsButton.MouseButton1Click:Connect(function()
     selectTrainType(1)
 end)
 
-LegsButton.MouseButton1Click:Connect(function()
+BackButton.MouseButton1Click:Connect(function()
     selectTrainType(2)
 end)
 
-BackButton.MouseButton1Click:Connect(function()
+LegsButton.MouseButton1Click:Connect(function()
     selectTrainType(3)
 end)
 
@@ -334,8 +374,12 @@ StartButton.MouseButton1Click:Connect(function()
         
         StartButton.Text = "STOP AUTO FARM"
         StartButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
-        StatusLabel.Text = "Status: Active"
+        StatusLabel.Text = "Status: Active - Training " .. selectedTrainType
         StatusLabel.TextColor3 = Color3.fromRGB(85, 255, 85)
+        
+        print("Auto Farm Started!")
+        print("Train Type: " .. selectedTrainType)
+        print("Multiplier: " .. formatNumber(multiplierValue))
     else
         StartButton.Text = "START AUTO FARM"
         StartButton.BackgroundColor3 = Color3.fromRGB(0, 123, 255)
@@ -344,28 +388,40 @@ StartButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Main Loop
-RunService.Heartbeat:Connect(function()
-    if autoFarmEnabled then
-        performTraining()
-        
-        -- Update Combat Power Display
-        local success, cp = pcall(function()
-            if ReplicatedStorage:FindFirstChild("TrainSystem") then
-                local bindable = ReplicatedStorage.TrainSystem.Bindable
-                if bindable and bindable:FindFirstChild("GetCombatPower") then
-                    return bindable.GetCombatPower:Invoke(LocalPlayer)
-                end
-            end
-            return 0
-        end)
-        
-        if success and cp then
-            CPLabel.Text = "Combat Power: " .. formatNumber(cp)
+-- Main Loop dengan rate limiting
+spawn(function()
+    while true do
+        if autoFarmEnabled then
+            performTraining()
         end
+        task.wait(trainingSpeed)
     end
 end)
 
-print("Auto Farm Training GUI Loaded!")
-print("Multiplier default: 100 juta per training")
-print("Ubah nilai untuk meningkatkan hingga triliun!")
+-- Update Combat Power Display
+spawn(function()
+    while true do
+        if autoFarmEnabled then
+            local success, cp = pcall(function()
+                if ReplicatedStorage:FindFirstChild("TrainSystem") then
+                    local bindable = ReplicatedStorage.TrainSystem.Bindable
+                    if bindable and bindable:FindFirstChild("GetCombatPower") then
+                        return bindable.GetCombatPower:Invoke(LocalPlayer)
+                    end
+                end
+                return 0
+            end)
+            
+            if success and cp then
+                CPLabel.Text = "Combat Power: " .. formatNumber(cp)
+            end
+        end
+        task.wait(1)
+    end
+end)
+
+print("=================================")
+print("Auto Farm Training v2 Loaded!")
+print("FIXED: Arms=1, Back=2, Legs=3, Agility=4")
+print("Default multiplier: 100M")
+print("=================================")
