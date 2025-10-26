@@ -1,5 +1,5 @@
 -- Auto Farm Training Script for Delta Executor
--- Combat Power Booster with Enhanced Multipliers
+-- Combat Power Booster with Enhanced Multiplierssss
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
