@@ -263,63 +263,27 @@ local function performTraining()
     lastTrainTime = currentTime
     
     local success, err = pcall(function()
-        -- Method 1: Gunakan remote function yang benar
+        -- CRITICAL: Harus gunakan Remote (ke server), bukan Bindable (client only)
+        
+        -- Step 1: Invoke ApplyStationaryTrain - ini yang penting!
+        local TrainEquipmentRemote = ReplicatedStorage:FindFirstChild("TrainEquipment")
+        if TrainEquipmentRemote and TrainEquipmentRemote:FindFirstChild("Remote") then
+            local ApplyStationaryTrain = TrainEquipmentRemote.Remote:FindFirstChild("ApplyStationaryTrain")
+            if ApplyStationaryTrain then
+                -- Invoke multiple times dengan multiplier
+                for i = 1, math.min(multiplierValue / 18, 1000) do
+                    ApplyStationaryTrain:InvokeServer()
+                    if i % 10 == 0 then task.wait(0.01) end -- Delay setiap 10x untuk avoid rate limit
+                end
+            end
+        end
+        
+        -- Step 2: Fire TrainSpeedHasChanged ke server
         local TrainSystemRemote = ReplicatedStorage:FindFirstChild("TrainSystem")
         if TrainSystemRemote and TrainSystemRemote:FindFirstChild("Remote") then
             local TrainSpeedHasChanged = TrainSystemRemote.Remote:FindFirstChild("TrainSpeedHasChanged")
             if TrainSpeedHasChanged then
                 TrainSpeedHasChanged:FireServer(selectedTrainType)
-            end
-        end
-        
-        -- Method 2: Trigger stationary train
-        local TrainEquipmentRemote = ReplicatedStorage:FindFirstChild("TrainEquipment")
-        if TrainEquipmentRemote and TrainEquipmentRemote:FindFirstChild("Remote") then
-            local ApplyStationaryTrain = TrainEquipmentRemote.Remote:FindFirstChild("ApplyStationaryTrain")
-            if ApplyStationaryTrain then
-                ApplyStationaryTrain:InvokeServer()
-            end
-        end
-        
-        -- Method 3: Fire bindable event dengan multiplier value
-        local TrainSystemBindable = ReplicatedStorage:FindFirstChild("TrainSystem")
-        if TrainSystemBindable and TrainSystemBindable:FindFirstChild("Bindable") then
-            local bindable = TrainSystemBindable.Bindable
-            
-            -- Get current value
-            local GetTrainValue = bindable:FindFirstChild("GetTrainValue")
-            local currentValue = 0
-            if GetTrainValue then
-                currentValue = GetTrainValue:Invoke(LocalPlayer, selectedTrainType) or 0
-            end
-            
-            -- Fire dengan nilai baru
-            local PlayerTrainValueHasChanged = bindable:FindFirstChild("PlayerTrainValueHasChanged")
-            if PlayerTrainValueHasChanged then
-                local newValue = currentValue + multiplierValue
-                PlayerTrainValueHasChanged:Fire(
-                    LocalPlayer,
-                    selectedTrainType,
-                    newValue,
-                    currentValue
-                )
-            end
-            
-            -- Update combat power
-            local PlayerCombatPowerHasChanged = bindable:FindFirstChild("PlayerCombatPowerHasChanged")
-            local GetCombatPower = bindable:FindFirstChild("GetCombatPower")
-            if PlayerCombatPowerHasChanged and GetCombatPower then
-                local newCP = GetCombatPower:Invoke(LocalPlayer) or 0
-                PlayerCombatPowerHasChanged:Fire(LocalPlayer, newCP + multiplierValue)
-            end
-        end
-        
-        -- Method 4: Fire statistics
-        local StatisticsBindable = ReplicatedStorage:FindFirstChild("Statistics")
-        if StatisticsBindable and StatisticsBindable:FindFirstChild("Bindable") then
-            local StatisticsDataHasChanged = StatisticsBindable.Bindable:FindFirstChild("StatisticsDataHasChanged")
-            if StatisticsDataHasChanged then
-                StatisticsDataHasChanged:Fire(math.random(100000, 999999), 1)
             end
         end
     end)
@@ -398,25 +362,23 @@ spawn(function()
     end
 end)
 
--- Update Combat Power Display
+-- Update Combat Power Display (READ ONLY, tidak diubah)
 spawn(function()
     while true do
-        if autoFarmEnabled then
-            local success, cp = pcall(function()
-                if ReplicatedStorage:FindFirstChild("TrainSystem") then
-                    local bindable = ReplicatedStorage.TrainSystem.Bindable
-                    if bindable and bindable:FindFirstChild("GetCombatPower") then
-                        return bindable.GetCombatPower:Invoke(LocalPlayer)
-                    end
+        local success, cp = pcall(function()
+            if ReplicatedStorage:FindFirstChild("TrainSystem") then
+                local bindable = ReplicatedStorage.TrainSystem.Bindable
+                if bindable and bindable:FindFirstChild("GetCombatPower") then
+                    return bindable.GetCombatPower:Invoke(LocalPlayer)
                 end
-                return 0
-            end)
-            
-            if success and cp then
-                CPLabel.Text = "Combat Power: " .. formatNumber(cp)
             end
+            return 0
+        end)
+        
+        if success and cp then
+            CPLabel.Text = "Combat Power: " .. formatNumber(cp)
         end
-        task.wait(1)
+        task.wait(2) -- Update lebih lambat untuk stabilitas
     end
 end)
 
